@@ -1,9 +1,7 @@
 package pkg
 
 import (
-	"bufio"
 	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -30,11 +28,8 @@ func TestReadTime(t *testing.T) {
 
 	for _, tc := range test_cases {
 		t.Run("ReadTime: "+tc.in, func(t *testing.T) {
-			s := bufio.NewScanner(strings.NewReader(tc.in))
-			s.Split(bufio.ScanWords)
 
-			var time Time
-			err := time.ReadFrom(s)
+			time, err := MakeTime(tc.in)
 
 			if tc.fail {
 				if err == nil {

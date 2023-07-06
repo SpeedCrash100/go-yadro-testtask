@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"strconv"
@@ -19,19 +18,12 @@ type Time struct {
 	Minutes uint8
 }
 
-func (t *Time) ReadFrom(reader *bufio.Scanner) error {
-	if !reader.Scan() {
-		if reader.Err() == nil {
-			// EOF
-			return errors.New("empty string")
-		}
-		return reader.Err()
-	}
+func MakeTime(description string) (Time, error) {
+	var t Time
 
-	text := reader.Text()
-	digits := strings.Split(text, ":")
+	digits := strings.Split(description, ":")
 	if len(digits) != 2 {
-		return ErrInvalidTimeFormat
+		return t, ErrInvalidTimeFormat
 	}
 
 	hours_str := digits[0]
@@ -39,36 +31,36 @@ func (t *Time) ReadFrom(reader *bufio.Scanner) error {
 
 	// If there are no leading zeros
 	if len(hours_str) != 2 || len(mins_str) != 2 {
-		return ErrInvalidTimeFormat
+		return t, ErrInvalidTimeFormat
 	}
 
 	// Drop strings like "+4"
 	if !unicode.IsDigit(rune(hours_str[0])) || !unicode.IsDigit(rune(mins_str[0])) {
-		return ErrInvalidTimeFormat
+		return t, ErrInvalidTimeFormat
 	}
 
 	hours, err := strconv.Atoi(hours_str)
 	if err != nil {
-		return err
+		return t, err
 	}
 
 	if hours < 0 || 24 <= hours {
-		return ErrTimeOutOfRange
+		return t, ErrTimeOutOfRange
 	}
 
 	mins, err := strconv.Atoi(mins_str)
 	if err != nil {
-		return err
+		return t, err
 	}
 
 	if mins < 0 || 60 <= mins {
-		return ErrTimeOutOfRange
+		return t, ErrTimeOutOfRange
 	}
 
 	t.Hour = uint8(hours)
 	t.Minutes = uint8(mins)
 
-	return nil
+	return t, nil
 }
 
 func (t Time) String() string {
@@ -91,4 +83,24 @@ func (left Time) LessOrEquals(right Time) bool {
 
 func (t Time) Between(start, end Time) bool {
 	return start.LessOrEquals(t) && t.Less(end)
+}
+
+func (left Time) Diff(right Time) Time {
+	hours := left.Hour - right.Hour
+	var minutes = left.Minutes - right.Minutes
+	if left.Minutes < right.Minutes {
+		hours--
+		minutes = 60 - (right.Minutes - left.Minutes)
+	}
+
+	return Time{hours, minutes}
+}
+
+func (left Time) HoursUp() uint8 {
+	hours := left.Hour
+	if 0 < left.Minutes {
+		hours++
+	}
+
+	return hours
 }

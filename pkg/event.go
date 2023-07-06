@@ -1,10 +1,10 @@
 package pkg
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -36,25 +36,52 @@ var (
 	ErrUnknownEventType   = errors.New("invalid event type")
 )
 
-func ReadEvent(s *bufio.Scanner) (EventInput, error) {
-	var base BaseEvent
+func NewInputEvent(description string) (InputEvent, error) {
+	pieces := strings.Split(description, " ")
 
-	if err := base.Read(s); err != nil {
+	if len(pieces) < 3 {
+		// 3 pieces minimum: time, id, client
+		return nil, ErrInvalidEventFormat
+	}
+
+	id, err := strconv.Atoi(pieces[1])
+	if err != nil {
 		return nil, err
 	}
 
-	id := base.Id()
+	time, err := MakeTime(pieces[0])
+	if err != nil {
+		return nil, err
+	}
+
+	client := pieces[2]
+
+	for _, ch := range client {
+		if !((unicode.IsLetter(ch) && unicode.IsLower(ch)) || unicode.IsDigit(ch) || ch == '_') {
+			return nil, ErrInvalidEventFormat
+		}
+	}
+
+	remaining_pieces := pieces[3:]
+
+	var event InputEvent
 
 	switch id {
 	case EVENT_ID_IN_CLIENT_ENTERED:
-		client_event := MakeClientAssociatedEvent(base)
-		if err := client_event.Read(s); err != nil {
-			return nil, err
-		}
-		return NewClientEnteredEvent(client_event), nil
-
+		event = NewClientEnteredInputEvent(time, client)
+	case EVENT_ID_IN_CLIENT_TAKE_A_SEAT:
+		event, err = NewClientTakeASeatInputEvent(time, client, remaining_pieces)
 	}
-	return nil, ErrUnknownEventType
+
+	if err != nil {
+		return nil, err
+	}
+
+	if event == nil {
+		return nil, ErrUnknownEventType
+	}
+
+	return event, nil
 }
 
 // Base Event interface
@@ -70,14 +97,11 @@ type Event interface {
 }
 
 // Input events can change state and
-type EventInput interface {
+type InputEvent interface {
 	Event
 
 	// Change state according to event
 	Translate(*State)
-
-	// Read event additional information from scanner
-	Read(*bufio.Scanner) error
 }
 
 // Base event for all events
@@ -98,68 +122,18 @@ func (e BaseEvent) Id() int {
 	return e.id
 }
 
-func (e *BaseEvent) Read(s *bufio.Scanner) error {
-	if err := e.time.ReadFrom(s); err != nil {
-		return err
-	}
-
-	if !s.Scan() {
-		if s.Err() == nil {
-			// EOF
-			return ErrInvalidEventFormat
-		}
-		return s.Err()
-	}
-
-	id_str := s.Text()
-	id, err := strconv.Atoi(id_str)
-	if err != nil {
-		return err
-	}
-
-	e.id = id
-
-	return nil
-}
-
 // Base event that must hold client
 type ClientAssociatedEvent struct {
 	BaseEvent
 	client string
 }
 
-func MakeClientAssociatedEvent(parent BaseEvent) ClientAssociatedEvent {
-	return ClientAssociatedEvent{parent, ""}
+func MakeClientAssociatedEvent(id int, time Time, client string) ClientAssociatedEvent {
+	return ClientAssociatedEvent{BaseEvent{time, id}, client}
 }
 
 func (e ClientAssociatedEvent) String() string {
 	return e.BaseEvent.String() + " " + e.client
-}
-
-func (e *ClientAssociatedEvent) Read(s *bufio.Scanner) error {
-
-	if !s.Scan() {
-		if s.Err() == nil {
-			// EOF
-			return ErrInvalidEventFormat
-		}
-		return s.Err()
-	}
-
-	client := s.Text()
-	client_chars := []rune(client)
-
-	for i := 0; i < len(client_chars); i++ {
-		ch := client_chars[i]
-		if unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_' {
-			continue
-		}
-		return ErrInvalidEventFormat
-	}
-
-	e.client = client
-
-	return nil
 }
 
 // Client Entered INPUT event
@@ -167,25 +141,141 @@ type ClientEnteredInputEvent struct {
 	ClientAssociatedEvent
 }
 
-func NewClientEnteredEvent(parent ClientAssociatedEvent) EventInput {
-	out := ClientEnteredInputEvent{parent}
-	return &out
+func NewClientEnteredInputEvent(time Time, client string) InputEvent {
+	return &ClientEnteredInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_ENTERED, time, client)}
 }
 
 func (e *ClientEnteredInputEvent) Translate(s *State) {
+
 	if s.Known(e.client) {
 		error_event := NewErrorOutputEvent(e, MSG_CLIENT_HAS_ALREADY_IN_CLUB)
-		fmt.Fprintln(s.writer, error_event)
+		s.events = append(s.events, error_event)
 		return
 	}
 
 	if !e.Time().Between(s.time_start, s.time_end) {
 		error_event := NewErrorOutputEvent(e, MSG_CLIENT_HAS_ARRIVED_NOT_IN_TIME)
-		fmt.Fprintln(s.writer, error_event)
+		s.events = append(s.events, error_event)
 		return
 	}
 
 	s.AddClient(e.client)
+}
+
+// Client take a seat
+type ClientTakeASeatInputEvent struct {
+	ClientAssociatedEvent
+	table_nmb uint
+}
+
+func NewClientTakeASeatInputEvent(time Time, client string, parts []string) (InputEvent, error) {
+	if len(parts) != 1 {
+		return nil, ErrInvalidEventFormat
+	}
+
+	table_nmb, err := strconv.ParseUint(parts[0], 10, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClientTakeASeatInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_TAKE_A_SEAT, time, client), uint(table_nmb)}, nil
+}
+
+func (e *ClientTakeASeatInputEvent) Translate(s *State) {
+	if s.TableBusy(e.table_nmb) {
+		error_event := NewErrorOutputEvent(e, MSG_PLACE_IS_BUSY)
+		s.events = append(s.events, error_event)
+		return
+	}
+
+	if !s.Known(e.client) {
+		error_event := NewErrorOutputEvent(e, MSG_CLIENT_UNKNOWN)
+		s.events = append(s.events, error_event)
+		return
+	}
+
+	s.OccupyTable(e.table_nmb, e.client)
+}
+
+func (e *ClientTakeASeatInputEvent) String() string {
+	return e.ClientAssociatedEvent.String() + " " + fmt.Sprintf("%d", e.table_nmb)
+}
+
+type ClientWaitingInputEvent struct {
+	ClientAssociatedEvent
+}
+
+func NewClientWaitingInputEvent(time Time, client string) InputEvent {
+	return &ClientEnteredInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_CLIENT_WAITING, time, client)}
+}
+
+func (e *ClientWaitingInputEvent) Translate(s *State) {
+
+	if s.HaveEmptyTable() {
+		error_event := NewErrorOutputEvent(e, MSG_WAITING_WHILE_HAVE_FREE_SPACE)
+		s.events = append(s.events, error_event)
+		return
+	}
+
+	if s.queue.IsFull() {
+		s.ClientLeave(e.client)
+		event := NewClientLeftOutputEvent(s.current_time, e.client)
+		s.events = append(s.events, event)
+		return
+	}
+
+	s.queue.Push(e.client)
+
+}
+
+type ClientLeftInputEvent struct {
+	ClientAssociatedEvent
+}
+
+func NewClientLeftInputEvent(time Time, client string) InputEvent {
+	return &ClientLeftInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_LEFT, time, client)}
+}
+
+func (e *ClientLeftInputEvent) Translate(s *State) {
+	if !s.Known(e.client) {
+		error_event := NewErrorOutputEvent(e, MSG_CLIENT_UNKNOWN)
+		s.events = append(s.events, error_event)
+		return
+	}
+
+	freed_table, err := s.ClientLeave(e.client)
+	if err != nil {
+		return
+	}
+
+	if !s.queue.IsEmpty() {
+		client_to_place, _ := s.queue.Pop()
+		s.OccupyTable(freed_table, client_to_place)
+		occupy_event := NewClientTakenSeatOutputEvent(s.current_time, client_to_place, int(freed_table))
+		s.events = append(s.events, occupy_event)
+	}
+
+}
+
+type ClientLeftOutputEvent struct {
+	ClientAssociatedEvent
+}
+
+func NewClientLeftOutputEvent(time Time, client string) Event {
+	return &ClientLeftOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_LEFT, time, client)}
+}
+
+type ClientTakenSeatOutputEvent struct {
+	ClientAssociatedEvent
+	table_nmb uint
+}
+
+func NewClientTakenSeatOutputEvent(time Time, client string, table_nmb int) Event {
+	return &ClientTakenSeatOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_LEFT, time, client), uint(table_nmb)}
+}
+
+func (e *ClientTakenSeatOutputEvent) String() string {
+	return e.ClientAssociatedEvent.String() + " " + fmt.Sprintf("%d", e.table_nmb)
 }
 
 // Error event
