@@ -71,6 +71,10 @@ func NewInputEvent(description string) (InputEvent, error) {
 		event = NewClientEnteredInputEvent(time, client)
 	case EVENT_ID_IN_CLIENT_TAKE_A_SEAT:
 		event, err = NewClientTakeASeatInputEvent(time, client, remaining_pieces)
+	case EVENT_ID_IN_CLIENT_CLIENT_WAITING:
+		event = NewClientWaitingInputEvent(time, client)
+	case EVENT_ID_IN_CLIENT_LEFT:
+		event = NewClientLeftInputEvent(time, client)
 	}
 
 	if err != nil {
@@ -206,7 +210,7 @@ type ClientWaitingInputEvent struct {
 }
 
 func NewClientWaitingInputEvent(time Time, client string) InputEvent {
-	return &ClientEnteredInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_CLIENT_WAITING, time, client)}
+	return &ClientWaitingInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_CLIENT_WAITING, time, client)}
 }
 
 func (e *ClientWaitingInputEvent) Translate(s *State) {

@@ -22,6 +22,15 @@ type State struct {
 	events []Event
 }
 
+func MakeState() State {
+	return State{
+		client_set:            make(map[string]struct{}),
+		clients_start_time:    make(map[string]Time),
+		clients_current_table: make(map[string]uint),
+		clients_profit:        make(map[string]int),
+	}
+}
+
 // Are we know this client(It is in club)
 func (s State) Known(client string) bool {
 	_, ok := s.client_set[client]
