@@ -74,3 +74,21 @@ func (t *Time) ReadFrom(reader *bufio.Scanner) error {
 func (t Time) String() string {
 	return fmt.Sprintf("%02d:%02d", t.Hour, t.Minutes)
 }
+
+func (left Time) Less(right Time) bool {
+	if left.Hour < right.Hour {
+		return true
+	} else if left.Hour == right.Hour {
+		return left.Minutes < right.Minutes
+	}
+
+	return false
+}
+
+func (left Time) LessOrEquals(right Time) bool {
+	return left.Less(right) || left == right
+}
+
+func (t Time) Between(start, end Time) bool {
+	return start.LessOrEquals(t) && t.Less(end)
+}

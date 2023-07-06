@@ -33,7 +33,29 @@ const (
 
 var (
 	ErrInvalidEventFormat = errors.New("invalid event format")
+	ErrUnknownEventType   = errors.New("invalid event type")
 )
+
+func ReadEvent(s *bufio.Scanner) (EventInput, error) {
+	var base BaseEvent
+
+	if err := base.Read(s); err != nil {
+		return nil, err
+	}
+
+	id := base.Id()
+
+	switch id {
+	case EVENT_ID_IN_CLIENT_ENTERED:
+		client_event := MakeClientAssociatedEvent(base)
+		if err := client_event.Read(s); err != nil {
+			return nil, err
+		}
+		return NewClientEnteredEvent(client_event), nil
+
+	}
+	return nil, ErrUnknownEventType
+}
 
 // Base Event interface
 type Event interface {
@@ -106,14 +128,15 @@ type ClientAssociatedEvent struct {
 	client string
 }
 
+func MakeClientAssociatedEvent(parent BaseEvent) ClientAssociatedEvent {
+	return ClientAssociatedEvent{parent, ""}
+}
+
 func (e ClientAssociatedEvent) String() string {
 	return e.BaseEvent.String() + " " + e.client
 }
 
 func (e *ClientAssociatedEvent) Read(s *bufio.Scanner) error {
-	if err := e.BaseEvent.Read(s); err != nil {
-		return err
-	}
 
 	if !s.Scan() {
 		if s.Err() == nil {
@@ -137,6 +160,32 @@ func (e *ClientAssociatedEvent) Read(s *bufio.Scanner) error {
 	e.client = client
 
 	return nil
+}
+
+// Client Entered INPUT event
+type ClientEnteredInputEvent struct {
+	ClientAssociatedEvent
+}
+
+func NewClientEnteredEvent(parent ClientAssociatedEvent) EventInput {
+	out := ClientEnteredInputEvent{parent}
+	return &out
+}
+
+func (e *ClientEnteredInputEvent) Translate(s *State) {
+	if s.Known(e.client) {
+		error_event := NewErrorOutputEvent(e, MSG_CLIENT_HAS_ALREADY_IN_CLUB)
+		fmt.Fprintln(s.writer, error_event)
+		return
+	}
+
+	if !e.Time().Between(s.time_start, s.time_end) {
+		error_event := NewErrorOutputEvent(e, MSG_CLIENT_HAS_ARRIVED_NOT_IN_TIME)
+		fmt.Fprintln(s.writer, error_event)
+		return
+	}
+
+	s.AddClient(e.client)
 }
 
 // Error event
