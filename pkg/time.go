@@ -3,6 +3,7 @@ package pkg
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -68,4 +69,8 @@ func (t *Time) ReadFrom(reader *bufio.Scanner) error {
 	t.Minutes = uint8(mins)
 
 	return nil
+}
+
+func (t Time) String() string {
+	return fmt.Sprintf("%02d:%02d", t.Hour, t.Minutes)
 }

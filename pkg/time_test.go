@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -52,6 +53,29 @@ func TestReadTime(t *testing.T) {
 
 			if tc.mins != time.Minutes {
 				t.Errorf("Read invalid minutes: %d != %d", tc.mins, time.Minutes)
+			}
+
+		})
+	}
+}
+
+func TestTimeToString(t *testing.T) {
+	test_cases := []struct {
+		hours uint8  // Hours
+		mins  uint8  // Mins
+		str   string // Expected string generated
+	}{
+		{12, 0, "12:00"},
+		{12, 30, "12:30"},
+		{0, 0, "00:00"},
+	}
+
+	for _, tc := range test_cases {
+		t.Run("Time To String: "+tc.str, func(t *testing.T) {
+			s := fmt.Sprintf("%v", Time{tc.hours, tc.mins})
+
+			if s != tc.str {
+				t.Errorf("Invalid time '%s' convertion. Result is '%s'", tc.str, s)
 			}
 
 		})
