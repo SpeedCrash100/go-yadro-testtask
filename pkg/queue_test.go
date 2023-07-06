@@ -32,6 +32,10 @@ func TestQueueOverflow(t *testing.T) {
 		}
 	}
 
+	if !q.IsFull() {
+		t.Errorf("Expected queue to be full")
+	}
+
 	if err := q.Push(0); err == nil {
 		t.Errorf("Expected overflow error")
 	}

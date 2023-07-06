@@ -28,9 +28,13 @@ func (q *Queue[T]) IsEmpty() bool {
 	return q.start == -1 && q.end == -1
 }
 
+func (q *Queue[T]) IsFull() bool {
+	return (q.end+1)%q.n == q.start
+}
+
 func (q *Queue[T]) Push(val T) error {
 	place_id := (q.end + 1) % q.n
-	if place_id == q.start {
+	if q.IsFull() {
 		return ErrQueueFull
 	}
 
