@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	ErrEOF = errors.New("unexpected end of file")
+	ErrEOF                 = errors.New("unexpected end of file")
+	ErrInvalidOrderOfEvent = errors.New("invalid order of events")
 )
 
 type App struct {
@@ -31,7 +32,7 @@ func (app *App) Process() error {
 		return err
 	}
 
-	fmt.Fprintln(app.output, app.state.time_start)
+	var prev_time Time
 
 	for app.input.Scan() {
 		str := app.input.Text()
@@ -49,6 +50,13 @@ func (app *App) Process() error {
 			app.state.OnClubClose()
 		}
 
+		// Invalid order of events
+		if !prev_time.LessOrEquals(event.Time()) {
+			fmt.Fprintln(app.output, event)
+			return ErrInvalidOrderOfEvent
+		}
+
+		prev_time = event.Time()
 		app.state.current_time = event.Time()
 		app.state.events = append(app.state.events, event)
 
@@ -60,6 +68,8 @@ func (app *App) Process() error {
 	if app.state.current_time.LessOrEquals(app.state.time_end) {
 		app.state.OnClubClose()
 	}
+
+	fmt.Fprintln(app.output, app.state.time_start)
 
 	for _, e := range app.state.events {
 		fmt.Fprintln(app.output, e)
