@@ -28,7 +28,7 @@ func compareReaders(left, right io.Reader) error {
 		right_line := scanner_right.Text()
 
 		if left_line != right_line {
-			return fmt.Errorf("file differs on line: %d", line_count)
+			return fmt.Errorf("file differs on line: %d: '%s' != '%s'", line_count, left_line, right_line)
 		}
 
 		line_count++
@@ -101,7 +101,7 @@ func TestApp(t *testing.T) {
 			output_stream := strings.NewReader(output)
 
 			if err := compareReaders(output_stream, tc.out); err != nil {
-				t.Errorf("compare error: %v", err)
+				t.Errorf("compare error: %v\nReal output:\n%s", err, output)
 			}
 
 		})
