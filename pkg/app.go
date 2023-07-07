@@ -40,7 +40,7 @@ func (app *App) Process() error {
 			continue
 		}
 
-		event, err := NewInputEvent(str)
+		event, err := NewInputEvent(str, app.state)
 		if err != nil {
 			fmt.Fprintln(app.output, str)
 			return err

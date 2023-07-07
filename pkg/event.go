@@ -36,7 +36,7 @@ var (
 	ErrUnknownEventType   = errors.New("invalid event type")
 )
 
-func NewInputEvent(description string) (InputEvent, error) {
+func NewInputEvent(description string, state State) (InputEvent, error) {
 	pieces := strings.Split(description, " ")
 
 	if len(pieces) < 3 {
@@ -70,7 +70,7 @@ func NewInputEvent(description string) (InputEvent, error) {
 	case EVENT_ID_IN_CLIENT_ENTERED:
 		event = NewClientEnteredInputEvent(time, client)
 	case EVENT_ID_IN_CLIENT_TAKE_A_SEAT:
-		event, err = NewClientTakeASeatInputEvent(time, client, remaining_pieces)
+		event, err = NewClientTakeASeatInputEvent(time, client, remaining_pieces, state)
 	case EVENT_ID_IN_CLIENT_CLIENT_WAITING:
 		event = NewClientWaitingInputEvent(time, client)
 	case EVENT_ID_IN_CLIENT_LEFT:
@@ -172,7 +172,7 @@ type ClientTakeASeatInputEvent struct {
 	table_nmb uint
 }
 
-func NewClientTakeASeatInputEvent(time Time, client string, parts []string) (InputEvent, error) {
+func NewClientTakeASeatInputEvent(time Time, client string, parts []string, state State) (InputEvent, error) {
 	if len(parts) != 1 {
 		return nil, ErrInvalidEventFormat
 	}
@@ -180,6 +180,10 @@ func NewClientTakeASeatInputEvent(time Time, client string, parts []string) (Inp
 	table_nmb, err := strconv.ParseUint(parts[0], 10, 0)
 	if err != nil {
 		return nil, err
+	}
+
+	if table_nmb == 0 || state.table_count < uint(table_nmb) {
+		return nil, ErrInvalidEventFormat
 	}
 
 	return &ClientTakeASeatInputEvent{MakeClientAssociatedEvent(EVENT_ID_IN_CLIENT_TAKE_A_SEAT, time, client), uint(table_nmb)}, nil
