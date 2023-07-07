@@ -120,19 +120,19 @@ func (app *App) readClubInfo() error {
 
 	start_time, err := MakeTime(times_strs[0])
 	if err != nil {
-		fmt.Fprintln(app.output, tables_str)
+		fmt.Fprintln(app.output, times_str)
 		return err
 	}
 	end_time, err := MakeTime(times_strs[1])
 	if err != nil {
-		fmt.Fprintln(app.output, tables_str)
+		fmt.Fprintln(app.output, times_str)
 		return err
 	}
 
 	app.state.time_start = start_time
 	app.state.time_end = end_time
 	if !(start_time.Less(end_time)) {
-		fmt.Fprintln(app.output, tables_str)
+		fmt.Fprintln(app.output, times_str)
 		return ErrInvalidTimeFormat
 	}
 

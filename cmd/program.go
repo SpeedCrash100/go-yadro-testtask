@@ -32,7 +32,10 @@ func main() {
 	app := pkg.NewApp(o, os.Stdout)
 
 	if err := app.Process(); err != nil {
-		fmt.Println(err)
+		if len(os.Getenv("DEBUG")) > 0 {
+			fmt.Println(err)
+		}
+
 	}
 
 }
