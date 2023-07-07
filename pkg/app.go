@@ -44,6 +44,11 @@ func (app *App) Process() error {
 			return err
 		}
 
+		// If event AFTER close then we need to generate client left event now
+		if app.state.time_end.Less(event.Time()) {
+			app.state.OnClubClose()
+		}
+
 		app.state.current_time = event.Time()
 		app.state.events = append(app.state.events, event)
 
@@ -51,7 +56,10 @@ func (app *App) Process() error {
 
 	}
 
-	app.state.OnClubClose()
+	// Means it wasn't run in loop because there were not event after close
+	if app.state.current_time.LessOrEquals(app.state.time_end) {
+		app.state.OnClubClose()
+	}
 
 	for _, e := range app.state.events {
 		fmt.Fprintln(app.output, e)
