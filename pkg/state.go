@@ -1,6 +1,9 @@
 package pkg
 
-import "errors"
+import (
+	"errors"
+	"sort"
+)
 
 type State struct {
 	table_count uint
@@ -75,7 +78,10 @@ func (s State) Clients() []string {
 func (s *State) OnClubClose() {
 	s.current_time = s.time_end
 
-	for _, cl := range s.Clients() {
+	clients := s.Clients()
+	sort.Slice(clients, func(i, j int) bool { return clients[i] < clients[j] })
+
+	for _, cl := range clients {
 		s.LeaveTable(cl)
 		event := NewClientLeftOutputEvent(s.time_end, cl)
 		s.events = append(s.events, event)
