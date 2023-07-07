@@ -42,6 +42,7 @@ func (app *App) Process() error {
 
 		event, err := NewInputEvent(str)
 		if err != nil {
+			fmt.Fprintln(app.output, str)
 			return err
 		}
 
