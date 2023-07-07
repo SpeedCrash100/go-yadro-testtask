@@ -31,6 +31,8 @@ func (app *App) Process() error {
 		return err
 	}
 
+	fmt.Fprintln(app.output, app.state.time_start)
+
 	for app.input.Scan() {
 		str := app.input.Text()
 		if len(str) == 0 {
@@ -49,8 +51,16 @@ func (app *App) Process() error {
 
 	}
 
+	app.state.OnClubClose()
+
 	for _, e := range app.state.events {
 		fmt.Println(e)
+	}
+
+	fmt.Println(app.state.time_end)
+
+	for i := 0; i < int(app.state.table_count); i++ {
+		fmt.Printf("%d %d %v\n", i+1, app.state.tables_profit[i], app.state.tables_usage[i])
 	}
 
 	return nil
@@ -72,9 +82,7 @@ func (app *App) readClubInfo() error {
 		return err
 	}
 
-	app.state.table_count = uint(tables_count)
-	app.state.tables_occupation = make([]string, tables_count)
-	app.state.queue = NewQueue[string](int(tables_count))
+	app.state.InitTables(uint(tables_count))
 
 	// Second line - Get open times
 	if !app.input.Scan() {

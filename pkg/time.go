@@ -85,6 +85,16 @@ func (t Time) Between(start, end Time) bool {
 	return start.LessOrEquals(t) && t.Less(end)
 }
 
+func (left Time) Add(right Time) Time {
+	minutes := left.Minutes + right.Minutes
+	add_to_hours := minutes / 60
+	minutes = minutes % 60
+
+	hours := left.Hour + right.Hour + add_to_hours
+
+	return Time{hours, minutes}
+}
+
 func (left Time) Diff(right Time) Time {
 	hours := left.Hour - right.Hour
 	var minutes = left.Minutes - right.Minutes
