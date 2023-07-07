@@ -71,3 +71,6 @@ go test ./pkg --run TestApp
 PASS
 ok      github.com/speedcrash100/go-yadro-testtask/pkg  0.002s
 ```
+
+## Как работает приложение
+Приложение имеет состояние [State](https://github.com/SpeedCrash100/go-yadro-testtask/blob/main/pkg/state.go), которое может изменятся и дополняться согласно входным событиям реализующие [InputEvent](https://github.com/SpeedCrash100/go-yadro-testtask/blob/02f08ddc37cbb14c3e9a26a30bd99088c6ab2dcc/pkg/event.go#L104)
