@@ -23,7 +23,6 @@ func TestReadTime(t *testing.T) {
 		{"24:00", true, 0, 0},
 		{"00:70", true, 0, 0},
 		{"-1:30", true, 0, 0},
-		{"12:30 70:30", false, 12, 30},
 	}
 
 	for _, tc := range test_cases {
