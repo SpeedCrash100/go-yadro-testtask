@@ -259,7 +259,7 @@ func (e *ClientLeftInputEvent) Translate(s *State) {
 	if !s.queue.IsEmpty() {
 		client_to_place, _ := s.queue.Pop()
 		s.OccupyTable(freed_table, client_to_place)
-		occupy_event := NewClientTakenSeatOutputEvent(s.current_time, client_to_place, int(freed_table))
+		occupy_event := NewClientTakenSeatOutputEvent(s.current_time, client_to_place, freed_table)
 		s.events = append(s.events, occupy_event)
 	}
 
@@ -278,8 +278,8 @@ type ClientTakenSeatOutputEvent struct {
 	table_nmb uint
 }
 
-func NewClientTakenSeatOutputEvent(time Time, client string, table_nmb int) Event {
-	return &ClientTakenSeatOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_LEFT, time, client), uint(table_nmb)}
+func NewClientTakenSeatOutputEvent(time Time, client string, table_nmb uint) Event {
+	return &ClientTakenSeatOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_LEFT, time, client), table_nmb}
 }
 
 func (e *ClientTakenSeatOutputEvent) String() string {

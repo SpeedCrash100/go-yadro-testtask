@@ -78,7 +78,7 @@ func (app *App) Process() error {
 
 	fmt.Fprintln(app.output, app.state.time_end)
 
-	for i := 0; i < int(app.state.table_count); i++ {
+	for i := uint(0); i < app.state.table_count; i++ {
 		fmt.Fprintf(app.output, "%d %d %v\n", i+1, app.state.tables_profit[i], app.state.tables_usage[i])
 	}
 
