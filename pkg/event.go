@@ -279,7 +279,7 @@ type ClientTakenSeatOutputEvent struct {
 }
 
 func NewClientTakenSeatOutputEvent(time Time, client string, table_nmb uint) Event {
-	return &ClientTakenSeatOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_LEFT, time, client), table_nmb}
+	return &ClientTakenSeatOutputEvent{MakeClientAssociatedEvent(EVENT_ID_OUT_CLIENT_TAKE_A_SEAT, time, client), table_nmb}
 }
 
 func (e *ClientTakenSeatOutputEvent) String() string {
